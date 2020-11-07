@@ -136,8 +136,6 @@ const useGoogleBotSites = [
   'dailytelegraph.com.au',
   'fd.nl',
   'genomeweb.com',
-  'haaretz.co.il',
-  'haaretz.com',
   'heraldsun.com.au',
   'mexiconewsdaily.com',
   'ntnews.com.au',
@@ -145,7 +143,6 @@ const useGoogleBotSites = [
   'seekingalpha.com',
   'telegraph.co.uk',
   'theaustralian.com.au',
-  'themarker.com',
   'themercury.com.au',
   'thenational.scot',
   'thetimes.co.uk',
@@ -156,6 +153,13 @@ const useGoogleBotSites = [
   'handelsblatt.com',
   'washingtonpost.com',
   'df.cl'
+];
+
+// Override User-Agnet with Bingbot
+const useBingBotSites = [
+  'haaretz.co.il',
+  'haaretz.com',
+  'themarker.com'
 ];
 
 // Contains google bot sites above plus any custom sites
@@ -208,8 +212,16 @@ const blockedRegexes = {
   'technologyreview.com': /.+\.blueconic\.net\/.+/
 };
 
-const userAgentDesktop = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
-const userAgentMobile = 'Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible ; Googlebot/2.1 ; +http://www.google.com/bot.html)';
+const botAgents = {
+  'bing': {
+    'desktop': 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm) Chrome/86.0.4240.68 Safari/537.36 Edg/86.0.622.31',
+    'mobile': 'Mozilla/5.0 (Android 8.1; Mobile; rv:68.0) Gecko/68.0 Firefox/68.0 Bingbot/2.0+http://www.bing.com/bingbot.htm'
+  },
+  'google': {
+    'desktop': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    'mobile': 'Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible ; Googlebot/2.1 ; +http://www.google.com/bot.html)'
+  }
+}
 
 let enabledSites = [];
 
@@ -354,15 +366,22 @@ extensionApi.webRequest.onBeforeSendHeaders.addListener(function (details) {
     }
   }
 
-  // override User-Agent to use Googlebot
-  const useGoogleBot = _useGoogleBotSites.some(function (item) {
+  // override User-Agent to use Googlebot/BingBot
+  let useBot = false;
+  if (useGoogleBotSites.some(function (item) {
     return typeof item === 'string' && matchUrlDomain(item, details.url);
-  });
+  })) {
+    useBot = 'google';
+  } else if (useBingBotSites.some(function (item) {
+    return matchUrlDomain(item, details.url);
+  })) {
+    useBot = 'bing';
+  }
 
-  if (useGoogleBot) {
+  if (useBot) {
     requestHeaders.push({
       name: 'User-Agent',
-      value: useUserAgentMobile ? userAgentMobile : userAgentDesktop
+      value: useUserAgentMobile ? botAgents[useBot].mobile : botAgents[useBot].desktop
     });
     requestHeaders.push({
       name: 'X-Forwarded-For',
